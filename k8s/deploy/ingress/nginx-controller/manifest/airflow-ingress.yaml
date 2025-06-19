@@ -1,0 +1,43 @@
+# The HTTP-01 challenge happens here.
+# Ensure the firewall is open to the Let's Encrypt validation server.
+# loadBalancerSourceRanges:
+#   - 0.0.0.0/0
+
+
+# A temporary Ingress and pod (like cm-acme-http-solver-xxxxx) will be created to serve the challenge.
+
+# To check certificate status:
+# $ kubectl get certificate airflow-webserver-tls -n airflow
+# NAME                    READY   SECRET                  AGE
+# airflow-webserver-tls   False   airflow-webserver-tls   4m50s
+
+# Wait for READY to become True.
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: airflow-ingress
+  namespace: airflow
+  annotations:
+    # Reference the ClusterIssuer for TLS
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: airflow.default-data.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: airflow-webserver
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - airflow.default-data.com
+      # Create Certificate in "airflow-webserver-tls" 
+      # This is created automatically by cert-manager when this Ingress is created
+      secretName: airflow-webserver-tls

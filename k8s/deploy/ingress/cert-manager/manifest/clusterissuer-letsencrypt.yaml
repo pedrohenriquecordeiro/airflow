@@ -1,0 +1,22 @@
+# A Cluster-Issuer defines how Cert-Manager obtains certificates from a CA, and for production, 
+#  Let's Encrypt is a common choice. 
+# It uses the ACME protocol, with HTTP-01 challenge being simpler as it verifies domain ownership by serving files via Ingress.
+
+# In this ClusterIssuer, we specify Let’s Encrypt’s production ACME server URL, an email for registration, 
+#   and enable the HTTP-01 challenge solver using our NGINX ingress controller (class: nginx)
+# The privateKeySecretRef is the Kubernetes Secret where the ACME account key will be stored (it will be created automatically).
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: pedro.jesus@default.com.br
+    privateKeySecretRef:
+      name: letsencrypt-prod  # This specifies the name of the Kubernetes Secret where cert-manager will store the private key for the ACME account
+    solvers:
+      - http01:
+          ingress:
+            class: nginx

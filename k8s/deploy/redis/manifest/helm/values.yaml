@@ -1,0 +1,25 @@
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: node-pool-name
+          operator: In
+          values:
+          - core-node-pool-2-8 
+
+master:
+  count: 1
+  persistence:
+    enabled: false
+
+replica:
+  replicaCount: 1
+  persistence:
+    enabled: false
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPU: "75"
+    targetMemory: "75"

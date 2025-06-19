@@ -1,0 +1,163 @@
+
+executor: "KubernetesExecutor"
+allowPodLaunching: true
+webserverSecretKeySecretName: webserver-secret
+
+images:
+  airflow:
+    repository: phcjesus/apache-airflow-with-extensions
+    tag: v0.1.2
+    pullPolicy: IfNotPresent
+  gitSync:
+    repository: registry.k8s.io/git-sync/git-sync
+    tag: v4.3.0
+    pullPolicy: IfNotPresent
+
+config:
+  smtp:
+    smtp_host: "smtp.mailgun.org"
+    smtp_starttls: "True"
+    smtp_ssl: "False"
+    smtp_port: "587"
+    smtp_mail_from: "email@email.com.br"
+    smtp_user: "email@email.com.br"
+    # smtp_password set via Helm --set
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: node-pool-name
+          operator: In
+          values:
+          - core-c2d-highcpu-4
+
+securityContext:
+  runAsUser: 50000
+  fsGroup: 0
+  runAsGroup: 0
+
+postgresql:
+  enabled: false
+
+data:
+  metadataConnection:
+    user: admin
+    pass: password
+    protocol: postgresql
+    host: airflow-postgresql # selector -> airflow-postgresql
+    port: 5432
+    db: airflow
+
+# PgBouncer is a lightweight PostgreSQL connection pooler.
+# It sits between Airflow and PostgreSQL database, managing and optimizing how connections are made.
+pgbouncer:
+  enabled: true
+  replicas: 1
+  serviceAccount:
+    create: false
+    name: airflow-service-account
+
+webserver:
+  hpa:
+    enabled: true
+    minReplicaCount: 1
+    maxReplicaCount: 3
+  service:
+    type: ClusterIP
+  serviceAccount:
+    create: false
+    name: airflow-service-account
+  defaultUser:
+    enabled: true
+    role: Admin
+    username: admin_default
+    email: admin_default@default.com
+    firstName: admin_default
+    lastName: user
+    password: admin_default_2025
+
+ingress:
+  web:
+    enabled: false
+
+scheduler:
+  logGroomerSidecar:
+    enabled: true
+    retentionDays: 3
+  serviceAccount:
+    create: false
+    name: airflow-service-account
+
+triggerer:
+  logGroomerSidecar:
+    enabled: true
+    retentionDays: 3
+  serviceAccount:
+    create: false
+    name: airflow-service-account
+
+# The dagProcessor is a dedicated component introduced to offload 
+# the DAG parsing and processing logic from the scheduler in Airflow 2.7+. 
+# It plays a key role in scaling the scheduler and improving performance.
+dagProcessor:
+  enabled: true
+  replicas: 1
+  logGroomerSidecar:
+    enabled: true
+    retentionDays: 3
+  serviceAccount:
+    create: false
+    name: airflow-service-account
+
+workers:
+  replicas: 1
+  hpa:
+    enabled: true
+    minReplicaCount: 1
+    maxReplicaCount: 3
+  serviceAccount:
+    create: false
+    name: airflow-service-account
+  logGroomerSidecar:
+    enabled: true
+    retentionDays: 3
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-pool-name
+            operator: In
+            values:
+            - work-c2d-highcpu-4
+
+
+statsd:
+  enabled: false
+
+cleanup:
+  enabled: true
+  schedule: "0 0 * * *"  # Daily at midnight
+  serviceAccount:
+    create: false
+    name: airflow-service-account
+
+dags:
+  gitSync:
+    enabled: true
+    repo: git@gitlab.com:defaultlabs/default/data/processes/airflow-dags.git
+    branch: main
+    rev: HEAD
+    depth: 1
+    subPath: "dags"
+    sshKeySecret: gitlab-ssh-secret
+    wait: 60
+    knownHosts: |
+      gitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsj2bNKTBSpIYDEGk9KxsGh3mySTRgMtXL583qmBpzeQ+jqCMRgBqB98u3z++J1sKlXHWfM9dyhSevkMwSbhoR8XIq/U0tCNyokEi/ueaBMCvbcTHhO7FcwzY92WK4Yt0aGROY5qX2UKSeOvuP4D6TPqKF1onrSzH9bx9XUf2lEdWT/ia1NEKjunUqu1xOB/StKDHMoX4/OKyIzuS0q/T1zOATthvasJFoPrAjkohTyaDUz2LN5JoH839hViyEG82yB+MjcFV5MU3N1l1QL3cVUCh93xSaua1N85qivl+siMkPGbO5xR/En4iEY6K2XPASUEMaieWVNTRCtJ4S8H+9
+
+logs:
+  persistence:
+    enabled: true
+    existingClaim: airflow-logs-pvc

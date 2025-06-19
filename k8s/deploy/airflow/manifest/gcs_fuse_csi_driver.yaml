@@ -1,0 +1,48 @@
+# sure if the GCS Fuse CSI driver is installed in your cluster.
+
+# PersistentVolume backed by GCS Fuse CSI driver
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gcs-fuse-csi-pv
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 50Gi
+  storageClassName: should-not-be-empty # StorageClassName must not be empty for static provisioning
+  mountOptions:
+    - implicit-dirs
+    - file-cache:max-size-mb:-1
+    - file-cache:enable-parallel-downloads:true
+    - file-cache:parallel-downloads-per-file:4
+    - file-cache:max-parallel-downloads:-1
+    - file-cache:download-chunk-size-mb:3
+    - uid=50000      # UID for Airflow process
+    - gid=0          # GID for root group
+    - dir-mode=0775  # Directory permissions
+    - file-mode=0664 # File permissions
+  csi:
+    driver: gcsfuse.csi.storage.gke.io
+    volumeHandle: default-logs-apache-airflow # GCS bucket or handle
+    volumeAttributes:
+      gcsfuseLoggingSeverity: warning
+
+---
+
+# PersistentVolumeClaim to bind to the above PersistentVolume
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gcs-fuse-csi-pvc
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  volumeName: gcs-fuse-csi-pv         # Must match the PV name above
+  storageClassName: should-not-be-empty 
+  # storageClassName does not need to refer to a StorageClass object.
+  # Use any non-empty value to bind the PVC to the PV.
+  # volumeName must match the PersistentVolume name to bind specifically.

@@ -1,0 +1,10 @@
+# Secret containing the SSH private key for GitLab access
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-ssh-secret
+  annotations:
+    description: "Chave privada para o repositorio Gitlab - user dados.git@default.com.br "
+data:
+  # SSH private key, base64 encoded. The key must be named 'gitSshKey'
+  gitSshKey: "LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K..."

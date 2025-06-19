@@ -1,0 +1,29 @@
+controller:
+  service:
+    type: LoadBalancer
+    loadBalancerIP: 34.134.107.91 # premium static IP in GCP
+    loadBalancerSourceRanges: 
+      - 34.170.248.193/32 # ip address do twingate
+      # - 0.0.0.0/0 # only temporary to TTP-01 challenge become ready
+  
+  ingressClass:
+    name: nginx
+    create: true
+    setAsDefaultIngress: true
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-pool-name
+            operator: In
+            values:
+            - core-c2d-highcpu-4
